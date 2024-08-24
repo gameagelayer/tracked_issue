@@ -13,7 +13,7 @@ query TrackIssuesQuery($owner: String!, $repository_name: String!, $number: Int!
           number
           state
           url
-          trackedIssues(first: 10){
+          trackedIssues(first: 100){
             nodes {
               number
               title
