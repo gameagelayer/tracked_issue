@@ -35,25 +35,40 @@ runs:
       with:
         script: |
           const query = `
-          query ($owner: String!, $name: String!, $label: String!) {
+          query ($owner: String!, $name: String!, $label: String!, $after: String) {
             repository(owner: $owner, name: $name) {
-              issues(first: 500, labels: [$label], states: OPEN) {
+              issues(first: 100, labels: [$label], states: OPEN, after: $after) {
                 nodes {
                   number
+                }
+                pageInfo {
+                  endCursor
+                  hasNextPage
                 }
               }
             }
           }`;
-          const {LABEL} = process.env
-          const variables = {
-            owner: context.repo.owner,
-            name: context.repo.repo,
-            label: LABEL
-          }
-          const result = await github.graphql(query, variables)
 
-          for (const issue of result.repository.issues.nodes) {
-            const query = `
+          const {LABEL} = process.env
+          let hasNextPage = true;
+          let afterCursor = null;
+          let issues = [];
+
+          while (hasNextPage) {
+            const variables = {
+              owner: context.repo.owner,
+              name: context.repo.repo,
+              label: LABEL,
+              after: afterCursor
+            }
+            const result = await github.graphql(query, variables);
+            issues = issues.concat(result.repository.issues.nodes);
+            hasNextPage = result.repository.issues.pageInfo.hasNextPage;
+            afterCursor = result.repository.issues.pageInfo.endCursor;
+          }
+
+          for (const issue of issues) {
+            const commentQuery = `
             query ($owner: String!, $name: String!, $number: Int!) {
               repository(owner: $owner, name: $name) {
                 issue(number: $number) {
@@ -73,7 +88,7 @@ runs:
               number: issue.number
             }
 
-            const result = await github.graphql(query, variables)
+            const result = await github.graphql(commentQuery, variables);
             let id = null;
             for (const comment of result.repository.issue.comments.nodes) {
               if(comment.body.includes("/generate_gid")) {
