@@ -19,7 +19,7 @@ jobs:
     name: Grasp issue dependencies
     steps:
       - uses: actions/checkout@v3
-      - uses: k-nasa/gid@main
+      - uses: gameagelayer/gid@main
         with:
           label: 'root'
           github_token: ${{secrets.GITHUB_TOKEN}}
